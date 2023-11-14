@@ -1,15 +1,21 @@
-# metoda.py
+import time
+
+
 class CSPSolver:
     def __init__(self, problem):
         self.problem = problem  # Instancja problemu CSP
         self.variables = problem.variables  # Zmienne do przypisania
         self.domains = problem.get_domains()  # Dostępne wartości dla zmiennych
         self.assignments = {}  # Słownik przechowujący obecne przypisania
+        self.nodes_expanded = 0  # Licznik rozwiniętych węzłów
+        self.backtracks = 0  # Licznik nawrotów
+        self.pruned_domains = {}  # Słownik przechowujący domeny po forward checking
 
     def backtrack(self):
         if len(self.assignments) == len(self.variables):
             return self.assignments.copy()  # Jeśli wszystkie zmienne są przypisane, zwróć rozwiązanie
 
+        self.nodes_expanded += 1
         var = self.select_unassigned_variable()  # Wybierz zmienną do przypisania
 
         for value in self.order_domain_values(var):
@@ -18,7 +24,12 @@ class CSPSolver:
                 result = self.backtrack()  # Kontynuuj rekurencyjnie
                 if result is not None:
                     return result  # Znaleziono rozwiązanie
+                self.backtracks += 1
                 del self.assignments[var]  # Usuń przypisanie i spróbuj inną wartość (backtrack)
+                # Przywróć usunięte wartości z domen
+                for other_var, other_value in self.pruned_domains[var]:
+                    self.domains[other_var].add(other_value)
+                self.pruned_domains[var].clear()
 
         return None  # Brak rozwiązania dla tej ścieżki
 
@@ -29,55 +40,46 @@ class CSPSolver:
         return min(unassigned_vars, key=lambda var: len(self.domains[var]))
 
     def order_domain_values(self, var):
-        # Heurystyka: sortuj wartości z domeny na podstawie liczby ograniczeń nałożonych na pozostałe zmienne
-        # (Least Constraining Value)
-        if var not in self.assignments:
-            # Sortuj wartości na podstawie liczby możliwych wartości dla pozostałych zmiennych
-            return sorted(self.domains[var], key=lambda value: self.count_constraints(var, value))
-        else:
-            # Jeśli zmienna jest już przypisana, nie ma potrzeby sortowania
-            return self.domains[var]
-
-    def count_constraints(self, var, value):
-        # Liczy ograniczenia nałożone na nieprzypisane zmienne przez wartość 'value' zmiennej 'var'
-        count = 0
-        # Dodaj tymczasowo wartość do zmiennej
-        self.assignments[var] = value
-
-        # Sprawdź, czy tymczasowe przypisanie nie narusza ograniczeń
-        if not self.problem.constraints(self.assignments):
-            # Jeśli narusza, zwiększ licznik
-            count += 1
-        else:
-            # Sprawdź, czy przypisanie zmniejsza domeny innych zmiennych
-            for other_var in set(self.variables) - set(self.assignments.keys()):
-                for other_value in self.domains[other_var]:
-                    # Sprawdź spójność każdej wartości w domenie other_var
-                    if not self.problem.constraints(self.assignments):
-                        # Jeśli dodanie tej wartości sprawi, że inne przypisania staną się niespójne, zwiększ licznik
-                        count += 1
-        # Usuń tymczasowe przypisanie
-        del self.assignments[var]
-        return count
+        return list(self.domains[var])
 
     def is_consistent(self, var, value):
-        # Sprawdź, czy przypisanie wartości nie narusza żadnych ograniczeń
-        temp_assignments = self.assignments.copy()
-        temp_assignments[var] = value
-        if not self.problem.constraints(temp_assignments):
-            return False
+        self.assignments[var] = value
+        self.pruned_domains[var] = set()
 
-        # Forward checking: zaktualizuj domeny dla pozostałych zmiennych
         for other_var in self.variables:
-            if other_var not in temp_assignments:
-                # Sprawdź, czy istnieje jakakolwiek wartość, która jest spójna z tymczasowym przypisaniem
-                if not any(self.problem.constraints({**temp_assignments, other_var: other_value})
-                           for other_value in self.domains[other_var]):
-                    # Jeśli nie ma żadnej spójnej wartości, to przypisanie jest niespójne
-                    return False
+            if other_var not in self.assignments:
+                for other_value in self.domains[other_var].copy():
+                    # Sprawdź, czy dodanie wartości jest niespójne z ograniczeniami
+                    if not self.problem.constraints({**self.assignments, other_var: other_value}):
+                        # Jeśli tak, usuń tę wartość z domeny
+                        self.domains[other_var].remove(other_value)
+                        self.pruned_domains[var].add((other_var, other_value))
+
+        del self.assignments[var]  # Usuń tymczasowe przypisanie
+
+        # Sprawdź, czy żadna domena nie została opróżniona
+        if any(not self.domains[other_var] for other_var in self.variables if other_var not in self.assignments):
+            # Przywróć domeny przed wyjściem
+            for other_var, other_value in self.pruned_domains[var]:
+                self.domains[other_var].add(other_value)
+            return False
 
         return True
 
+    def reset_solver(self):
+        # Resetuj stan solvera
+        self.assignments = {}
+        self.pruned_domains = {}
+
     def solve(self):
-        # Rozpocznij proces backtrackingu
-        return self.backtrack()
+        start_time = time.time()
+        solution = self.backtrack()
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        # Możesz zwrócić te wartości, wydrukować je lub zapisać w atrybutach klasy
+        print(f"Szybkość uzyskania wyniku: {elapsed_time:.4f} sekund")
+        print(f"Liczba rozwijanych węzłów: {self.nodes_expanded}")
+        print(f"Liczba nawrotów: {self.backtracks}")
+
+        return solution

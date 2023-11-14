@@ -15,7 +15,7 @@ class CryptoarithmeticProblem:
 
     def extract_variables(self):
         # Ekstrakcja zmiennych z równania
-        return set(letter for letter in self.equation if letter.isalpha())
+        return sorted(set(letter for letter in self.equation if letter.isalpha()))
 
     def get_first_letters(self):
         # Zwraca pierwsze litery każdego słowa (które nie mogą być 0)
@@ -27,29 +27,31 @@ class CryptoarithmeticProblem:
         input_part, result_part = self.equation.split('=')
         input_words = [word.strip() for word in input_part.split('+')]
         result_word = result_part.strip()
-        print(input_words, result_word)
         return input_words, result_word
 
     def get_domains(self):
         # Domeny wartości dla zmiennych (dla kryptoarytmetycznego to cyfry 0-9)
-        return {var: set(range(10)) for var in self.variables}
+        domains = {var: set(range(10)) for var in self.variables}
+        return domains
 
     def constraints(self, assignments):
         # Sprawdź, czy wszystkie przypisane wartości są unikalne
-        if len(set(assignments.values())) != len(assignments):
+        assigned_values = list(assignments.values())
+        if len(assigned_values) != len(set(assigned_values)):
             return False
 
-        # Sprawdź, czy pierwsze litery słów nie są przypisane do 0
-        for first_letter in self.first_letters:
-            if assignments.get(first_letter) == 0:
-                return False
-
-        # Suma słów wejściowych jest równa słowu wynikowemu, jeśli wszystkie zmienne w słowie wynikowym mają przypisania
+        # Sprawdź, czy suma słów wejściowych jest równa słowu wynikowemu,
+        # tylko jeśli wszystkie zmienne w słowie wynikowym i wejściowym mają przypisania
         if all(var in assignments for var in self.result_word):
-            sum_input = sum(word_to_number(word, assignments) for word in self.words)
-            sum_result = word_to_number(self.result_word, assignments)
-            if sum_input != sum_result:
+            if all(all(var in assignments for var in word) for word in self.words):
+                sum_input = sum(word_to_number(word, assignments) for word in self.words)
+                sum_result = word_to_number(self.result_word, assignments)
+                return sum_input == sum_result
+
+        # Sprawdź, czy pierwsze litery słów wejściowych nie są 0
+        for word in self.words:
+            if assignments.get(word[0]) == 0:
                 return False
 
-        # Jeśli dotąd nie stwierdzono żadnych naruszeń, wszystkie ograniczenia są spełnione
         return True
+
