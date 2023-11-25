@@ -1,5 +1,5 @@
 from problem import CryptoarithmeticProblem
-from metoda import CSPSolver
+from metoda import CSP
 
 
 def main():
@@ -35,19 +35,16 @@ def main():
     #     "A + ROOFS + FOR + THEIR + SAFE = FORTRESSES"
     # ])
 
-    # Stworzenie instancji problemu
-    problem = CryptoarithmeticProblem(equation)
+    crypto_problem = CryptoarithmeticProblem(equation)
+    csp_solver = CSP(crypto_problem)
 
-    # Stworzenie solvera z podanym problemem
-    solver = CSPSolver(problem)
+    solution = csp_solver.solve()
 
-    # Rozpoczęcie procesu rozwiązywania
-    solution = solver.solve()
-    # Wyświetlenie wyniku
     if solution:
         print("Rozwiązanie zostało znalezione:")
-        for var, value in solution.items():
-            print(f"{var} = {value}")
+        # for var in solution:
+        #     print("{} = {}".format(var, solution[var]))
+        print(solution)
     else:
         print("Nie udało się znaleźć rozwiązania. 👉👈")
 
