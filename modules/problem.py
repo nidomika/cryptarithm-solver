@@ -29,29 +29,41 @@ class CryptoarithmeticProblem:
         result_word = result_part.strip()
         return input_words, result_word
 
+    def is_constraining(self, var, other_var):
+        # W problemach kryptoarytmetycznych każda litera ogranicza każdą inną
+        return var != other_var
+
     def get_domains(self):
         # Domeny wartości dla zmiennych (dla kryptoarytmetycznego to cyfry 0-9)
         domains = {var: set(range(10)) for var in self.variables}
         return domains
 
     def constraints(self, assignments):
-        # Sprawdź, czy wszystkie przypisane wartości są unikalne
-        assigned_values = list(assignments.values())
-        if len(assigned_values) != len(set(assigned_values)):
+        # Wszystkie różne
+        if len(set(assignments.values())) != len(assignments):
             return False
 
-        # Sprawdź, czy suma słów wejściowych jest równa słowu wynikowemu,
-        # tylko jeśli wszystkie zmienne w słowie wynikowym i wejściowym mają przypisania
-        if all(var in assignments for var in self.result_word):
-            if all(all(var in assignments for var in word) for word in self.words):
-                sum_input = sum(word_to_number(word, assignments) for word in self.words)
-                sum_result = word_to_number(self.result_word, assignments)
-                return sum_input == sum_result
-
-        # Sprawdź, czy pierwsze litery słów wejściowych nie są 0
-        for word in self.words:
-            if assignments.get(word[0]) == 0:
+        # Domena: pierwsze litery nie mogą być zero
+        for first_letter in self.first_letters:
+            if assignments.get(first_letter) == 0:
                 return False
+
+        # Kolumny arytmetyczne
+        if all(var in assignments for var in self.variables):
+            carry = 0
+            max_length = max(len(word) for word in self.words + [self.result_word])
+
+            for i in range(1, max_length + 1):
+                column_sum = sum(assignments.get(word[-i], 0) for word in self.words if len(word) >= i) + carry
+                result_digit = assignments.get(self.result_word[-i], 0) if len(self.result_word) >= i else 0
+                if column_sum % 10 != result_digit:
+                    return False
+                carry = column_sum // 10
+
+            # Sprawdź, czy ostatnie przeniesienie pasuje do najwyższej cyfry w słowie wynikowym
+            if carry != (assignments.get(self.result_word[-max_length], 0) if len(self.result_word) > max_length else 0):
+                return False
+
 
         return True
 

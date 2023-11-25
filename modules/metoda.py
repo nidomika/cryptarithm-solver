@@ -1,6 +1,10 @@
 import time
 
 
+def is_constraining(var, other_var):
+    # W problemach kryptoarytmetycznych każda litera ogranicza każdą inną
+    return var != other_var
+
 class CSPSolver:
     def __init__(self, problem):
         self.problem = problem  # Instancja problemu CSP
@@ -33,11 +37,18 @@ class CSPSolver:
 
         return None  # Brak rozwiązania dla tej ścieżki
 
+    def count_constraining(self, var):
+        # Liczy, ile razy zmienna var pojawia się w ograniczeniach z innymi zmiennymi
+        count = 0
+        for other_var in self.variables:
+            if other_var != var and self.problem.is_constraining(var, other_var):
+                count += 1
+        return count
+
     def select_unassigned_variable(self):
-        # Heurystyka: wybierz zmienną z najmniejszą liczbą dostępnych wartości
-        # (Most Constrained Variable)
         unassigned_vars = [v for v in self.variables if v not in self.assignments]
-        return min(unassigned_vars, key=lambda var: len(self.domains[var]))
+        # Wybierz zmienną, która narzuca najwięcej ograniczeń na inne zmienne
+        return max(unassigned_vars, key=lambda var: self.count_constraining(var))
 
     def order_domain_values(self, var):
         return list(self.domains[var])

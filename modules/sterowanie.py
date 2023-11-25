@@ -1,15 +1,17 @@
-from metoda import CSPSolver
 from problem import CryptoarithmeticProblem
+from metoda import CSPSolver
 
 
 def main():
-    # Tutaj użytkownik może wprowadzić swoje równanie lub możesz mieć zdefiniowane na stałe
+    print("uwu")
+    # equation = input("Please enter an equation (e.g., SEND + MORE = MONEY): ")
+
     # equation = input("Proszę wprowadzić równanie kryptoarytmetyczne (np. SEND + MORE = MONEY): ")
-    # equation = "SEND + MORE = MONEY"
+    equation = "SEND + MORE = MONEY"
     # equation = "NUM + BER = PLAY"
     # equation = "TWO + TWO = FOUR"
     # equation = "WHAT + WAS + THY = CAUSE"
-    equation = "CP + IS + FUN = TRUE"
+    # equation = "CP + IS + FUN = TRUE"
 
     # equation = ("SO+MANY+MORE+MEN+SEEM+TO+SAY+THAT+THEY+MAY+SOON+TRY+TO+STAY+AT+HOME+SO+AS+TO+SEE+OR+HEAR+THE+SAME+ONE"
     #             "+MAN+TRY+TO+MEET+THE+TEAM+ON+THE+MOON+AS+HE+HAS+AT+THE+OTHER+TEN=TESTS")
@@ -38,7 +40,6 @@ def main():
 
     # Stworzenie solvera z podanym problemem
     solver = CSPSolver(problem)
-    solver.reset_solver()  # Resetuj solver przed każdym nowym wywołaniem
 
     # Rozpoczęcie procesu rozwiązywania
     solution = solver.solve()
