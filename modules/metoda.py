@@ -1,7 +1,7 @@
 # Plik metoda.py
 
 class CSP:
-    def __init__(self, problem, enable_forward_checking=True):
+    def __init__(self, problem, heuristic="mrv", enable_forward_checking=True):
         """Inicjalizacja problemu CSP.
 
         :param problem: Obiekt klasy Problem
@@ -12,6 +12,7 @@ class CSP:
         self.constraints = problem.constraints
         self.assignment = {}
         self.enable_forward_checking = enable_forward_checking
+        self.heuristic = heuristic
 
     def backtracking_search(self):
         """Publiczna metoda rozpoczynająca przeszukiwanie w głąb."""
@@ -28,13 +29,13 @@ class CSP:
             return assignment
 
         # Wybieramy nieprzypisaną zmienną
-        var = self._select_unassigned_variable(assignment)
+        var = self.select_unassigned_variable()
         original_domains = self.domains.copy()  # Zapisz oryginalne domeny
 
         # Próbujemy przypisać wartość z dziedziny zmiennej
         for value in self.domains[var]:
             print("Przypisuję {} = {}".format(var, value))
-            print(self.domains)
+            print(self._is_consistent(var, value, assignment))
             if self._is_consistent(var, value, assignment):
                 # Dodajemy wartość do przypisania i kontynuujemy rekurencyjnie
                 assignment[var] = value
@@ -55,16 +56,33 @@ class CSP:
         """Sprawdza, czy przypisanie jest kompletnie (wszystkie zmienne mają wartości)."""
         return set(assignment.keys()) == set(self.variables)
 
-    def _select_unassigned_variable(self, assignment):
-        """Wybiera nieprzypisaną zmienną."""
-        for var in self.variables:
-            if var not in assignment:
-                return var
+
+    def select_unassigned_variable(self):
+        unassigned_vars = [v for v in self.variables if v not in self.assignment]
+        print("unassigned", unassigned_vars)
+        if self.heuristic == "mrv":
+            return min(unassigned_vars, key=lambda var: len(self.domains[var]))
+        elif self.heuristic == "degree":
+            return max(unassigned_vars, key=lambda var: self.count_constraining(var))
+        elif self.heuristic == "none":
+            return unassigned_vars[0]  # Po prostu wybierz pierwszą nieprzypisaną zmienną
+        else:
+            raise ValueError("Nieznana heurystyka")
+
+    def is_assigned(self, var):
+        return var in self.assignment
+
+    def count_constraining(self, var):
+        count = 0
+        for other_var in self.variables:
+            if other_var != var and not self.is_assigned(other_var):
+                count += 1
+        return count
 
     def _is_consistent(self, var, value, assignment):
         """Sprawdza, czy przypisanie jest spójne z ograniczeniami."""
         # Sprawdzamy ograniczenia dla każdej zmiennej
-        print("Sprawdzam ograniczenia dla zmiennej {} = {}".format(var, value))
+        # print("Sprawdzam ograniczenia dla zmiennej {} = {}".format(var, value))
         for constraint in self.constraints.get(var, []):
             if not constraint(assignment):
                 return False

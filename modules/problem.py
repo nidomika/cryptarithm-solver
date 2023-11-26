@@ -13,8 +13,9 @@ class CryptoarithmeticProblem:
         return sorted(set(letter for letter in self.equation if letter.isalpha()))
 
     def _get_first_letters(self):
-        # Zwraca pierwsze litery każdego słowa (które nie mogą być 0)
-        words = self.equation.split('=')[0].split('+')
+        # Zwraca pierwsze litery każdego słowa
+        words = self.equation.split('=')[0].split('+') + [self.equation.split('=')[1]]
+        print(words)
         return sorted(set(word.strip()[0] for word in words))
 
     def _parse_equation(self):
@@ -41,7 +42,7 @@ class CryptoarithmeticProblem:
 
     def columns_sum_with_carry_constraint(self, assignment):
         if len(assignment) < len(self.variables):
-            return False  # Nie wszystkie zmienne są jeszcze przypisane
+            return True  # Nie wszystkie zmienne są jeszcze przypisane
 
         # Obliczanie sumy dla każdej kolumny
         carry = 0
@@ -58,6 +59,25 @@ class CryptoarithmeticProblem:
 
         # Sprawdzenie, czy ostatnie przeniesienie jest równe 0
         return carry == 0
+
+    def constraints_column_equations(self):
+        # Zwraca równanie ograniczenia dla każdej kolumny
+        # np. SEND + MORE = MONEY
+        #   S E N D
+        # + M O R E
+        # ----------
+        # M O N E Y
+
+        words_inverted = [word[::-1] for word in self.words]
+        result_word_inverted = self.result_word[::-1]
+        carry = 0
+        constraints = []
+        for i in range(len(result_word_inverted)):
+            column_value = [word[i] if i < len(word) else 0 for word in words_inverted]
+            carry = column_value // 10
+            constraint = [column_value, result_word_inverted[i], carry]
+
+
 
     def word_to_number(self, word, assignment):
         # Konwersja słowa na liczbę na podstawie przypisania
