@@ -38,7 +38,7 @@ def main():
     crypto_problem = CryptoarithmeticProblem(equation)
     csp_solver = CSP(crypto_problem)
 
-    solution = csp_solver.solve()
+    solution = csp_solver.backtracking_search()
 
     if solution:
         print("Rozwiązanie zostało znalezione:")
