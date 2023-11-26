@@ -1,11 +1,3 @@
-def word_to_number(word, assignments):
-    # Przekształca słowo w liczbę na podstawie obecnych przypisań
-    number = 0
-    for letter in word:
-        number = number * 10 + assignments.get(letter, 0)
-    return number
-
-
 class CryptoarithmeticProblem:
     def __init__(self, equation):
         self.equation = equation
@@ -40,13 +32,23 @@ class CryptoarithmeticProblem:
         if len(assigned_values) != len(set(assigned_values)):
             return False
 
-        # Sprawdź, czy suma słów wejściowych jest równa słowu wynikowemu,
-        # tylko jeśli wszystkie zmienne w słowie wynikowym i wejściowym mają przypisania
-        if all(var in assignments for var in self.result_word):
-            if all(all(var in assignments for var in word) for word in self.words):
-                sum_input = sum(word_to_number(word, assignments) for word in self.words)
-                sum_result = word_to_number(self.result_word, assignments)
-                return sum_input == sum_result
+        if all(var in assignments for var in self.variables):
+            carry = 0
+            words = self.words  # Lista słów po lewej stronie równania
+            result_word = self.result_word  # Słowo po prawej stronie równania
+            max_length = max(len(word) for word in words + [result_word])
+
+            for i in range(1, max_length + 1):
+                column_sum = sum(assignments.get(word[-i], 0) for word in words if len(word) >= i) + carry
+                result_digit = assignments.get(result_word[-i], 0) if len(result_word) >= i else 0
+
+                if column_sum % 10 != result_digit:
+                    return False
+                carry = column_sum // 10
+
+            # Sprawdź ostatnie przeniesienie dla najwyższej cyfry w słowie wynikowym
+            if carry != (assignments.get(result_word[-max_length], 0) if len(result_word) > max_length else 0):
+                return False
 
         # Sprawdź, czy pierwsze litery słów wejściowych nie są 0
         for word in self.words:

@@ -35,7 +35,7 @@ def main():
 
     # Stworzenie instancji problemu
     problem = CryptoarithmeticProblem(equation)
-
+    print(equation)
     # Stworzenie solvera z podanym problemem
     solver = CSPSolver(problem)
     solver.reset_solver()  # Resetuj solver przed każdym nowym wywołaniem
@@ -45,8 +45,9 @@ def main():
     # Wyświetlenie wyniku
     if solution:
         print("Rozwiązanie zostało znalezione:")
-        for var, value in solution.items():
-            print(f"{var} = {value}")
+        # for var, value in solution.items():
+        #     print(f"{var} = {value}")
+        print(solution)
     else:
         print("Nie udało się znaleźć rozwiązania. 👉👈")
 

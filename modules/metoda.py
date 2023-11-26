@@ -2,7 +2,7 @@ import time
 
 
 class CSPSolver:
-    def __init__(self, problem):
+    def __init__(self, problem, heuristic="mrv", use_forward_checking=True):
         self.problem = problem  # Instancja problemu CSP
         self.variables = problem.variables  # Zmienne do przypisania
         self.domains = problem.get_domains()  # Dostępne wartości dla zmiennych
@@ -10,6 +10,8 @@ class CSPSolver:
         self.nodes_expanded = 0  # Licznik rozwiniętych węzłów
         self.backtracks = 0  # Licznik nawrotów
         self.pruned_domains = {}  # Słownik przechowujący domeny po forward checking
+        self.heuristic = heuristic  # Heurystyka wyboru zmiennej
+        self.use_forward_checking = use_forward_checking  # Czy używać forward checking
 
     def backtrack(self):
         if len(self.assignments) == len(self.variables):
@@ -34,37 +36,55 @@ class CSPSolver:
         return None  # Brak rozwiązania dla tej ścieżki
 
     def select_unassigned_variable(self):
-        # Heurystyka: wybierz zmienną z najmniejszą liczbą dostępnych wartości
-        # (Most Constrained Variable)
         unassigned_vars = [v for v in self.variables if v not in self.assignments]
-        return min(unassigned_vars, key=lambda var: len(self.domains[var]))
+        if self.heuristic == "mrv":
+            return min(unassigned_vars, key=lambda var: len(self.domains[var]))
+        elif self.heuristic == "degree":
+            return max(unassigned_vars, key=lambda var: self.count_constraining(var))
+        elif self.heuristic == "none":
+            return unassigned_vars[0]  # Po prostu wybierz pierwszą nieprzypisaną zmienną
+        else:
+            raise ValueError("Nieznana heurystyka")
+
+    def count_constraining(self, var):
+        count = 0
+        for other_var in self.variables:
+            if other_var != var and not self.is_assigned(other_var):
+                count += 1
+        return count
+
+    def is_assigned(self, var):
+        return var in self.assignments
 
     def order_domain_values(self, var):
         return list(self.domains[var])
 
     def is_consistent(self, var, value):
+        # Tymczasowe przypisanie dla sprawdzenia
         self.assignments[var] = value
-        self.pruned_domains[var] = set()
 
-        for other_var in self.variables:
-            if other_var not in self.assignments:
-                for other_value in self.domains[other_var].copy():
-                    # Sprawdź, czy dodanie wartości jest niespójne z ograniczeniami
-                    if not self.problem.constraints({**self.assignments, other_var: other_value}):
-                        # Jeśli tak, usuń tę wartość z domeny
-                        self.domains[other_var].remove(other_value)
-                        self.pruned_domains[var].add((other_var, other_value))
+        # Jeśli forward checking jest wyłączone, sprawdź tylko obecne przypisanie
+        if not self.use_forward_checking:
+            is_consistent = self.problem.constraints(self.assignments)
+        else:
+            # Logika z forward checking
+            self.pruned_domains[var] = set()
+            for other_var in self.variables:
+                if other_var not in self.assignments:
+                    for other_value in self.domains[other_var].copy():
+                        if not self.problem.constraints({**self.assignments, other_var: other_value}):
+                            self.domains[other_var].remove(other_value)
+                            self.pruned_domains[var].add((other_var, other_value))
+
+            if any(not self.domains[other_var] for other_var in self.variables if other_var not in self.assignments):
+                # Przywróć domeny przed wyjściem
+                for other_var, other_value in self.pruned_domains[var]:
+                    self.domains[other_var].add(other_value)
+                del self.assignments[var]
+                return False
 
         del self.assignments[var]  # Usuń tymczasowe przypisanie
-
-        # Sprawdź, czy żadna domena nie została opróżniona
-        if any(not self.domains[other_var] for other_var in self.variables if other_var not in self.assignments):
-            # Przywróć domeny przed wyjściem
-            for other_var, other_value in self.pruned_domains[var]:
-                self.domains[other_var].add(other_value)
-            return False
-
-        return True
+        return is_consistent if not self.use_forward_checking else True
 
     def reset_solver(self):
         # Resetuj stan solvera
