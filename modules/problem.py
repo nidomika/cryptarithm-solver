@@ -1,110 +1,101 @@
+import itertools
+import re
+
+
 class CryptoarithmeticProblem:
     def __init__(self, equation):
-        self.equation = equation
-        self.variables = self._extract_variables()
-        self.first_letters = self._get_first_letters()
-        self.words, self.result_word = self._parse_equation()
+        self.equation = equation.replace(" ", "")
+        self.variables = sorted(set(re.findall(r'[A-Z]', self.equation)))
         self.domains = {var: list(range(10)) for var in self.variables}
-        # Ustawienie ograniczeń
-        self.constraints = self._setup_constraints()
+        self.constraints = {var: [] for var in self.variables}
+        self.create_constraints()
 
-    def _extract_variables(self):
-        # Ekstrakcja zmiennych z równania
-        return sorted(set(letter for letter in self.equation if letter.isalpha()))
+    def create_constraints(self):
+        # Dodaj ogólne ograniczenie unikalności wartości.
+        self.add_all_different_constraint()
 
-    def _get_first_letters(self):
-        # Zwraca pierwsze litery każdego słowa
-        words = self.equation.split('=')[0].split('+') + [self.equation.split('=')[1]]
-        print(words)
-        return sorted(set(word.strip()[0] for word in words))
+        # Dodaj ograniczenie, że pierwsze litery nie mogą być zerami.
+        first_letters = set(re.findall(r'\b[A-Z]', self.equation))
+        for letter in first_letters:
+            self.constraints[letter].append(lambda values, l=letter: values[l] != 0)
 
-    def _parse_equation(self):
-        # Parsowanie równania na słowa wejściowe i wynikowe
-        input_part, result_part = self.equation.split('=')
-        input_words = [word.strip() for word in input_part.split('+')]
-        result_word = result_part.strip()
-        return input_words, result_word
+        # Dodaj ograniczenie arytmetyczne dla całego równania.
+        self.add_non_zero_constraint()
+        self.add_arithmetic_constraint()
+        self.add_carry_constraints()
 
-    def _setup_constraints(self):
-        # Przypisanie listy funkcji ograniczeń do każdej zmiennej
-        constraints = {var: [self.all_different_constraint,
-                             self.first_letter_not_zero_constraint,
-                             self.columns_sum_with_carry_constraint] for var in self.variables}
-        return constraints
+    def add_non_zero_constraint(self):
+        first_letters = set(re.findall(r'\b[A-Z]', self.equation))
+        for letter in first_letters:
+            self.constraints[letter].append(lambda assignment, l=letter: assignment.get(l, 1) != 0)
 
-    def all_different_constraint(self, assignment):
-        # Wszystkie wartości przypisane muszą być różne
-        return len(set(assignment.values())) == len(assignment.values())
+    def add_all_different_constraint(self):
+        def all_different(values):
+            return len(values) == len(set(values))
+        for pair in itertools.combinations(self.variables, 2):
+            self.constraints[pair[0]].append(lambda values, p=pair: all_different([values.get(p[0]), values.get(p[1])]))
 
-    def first_letter_not_zero_constraint(self, assignment):
-        # Pierwsze litery każdego słowa nie mogą być 0
-        return all(assignment[letter] != 0 for letter in self.first_letters if letter in assignment)
+    def add_arithmetic_constraint(self):
+        def check_equation(assignment):
+            if len(assignment) < len(self.variables):  # Jeszcze nie wszystkie zmienne mają wartość
+                return True
+            #  sprawdzanie, czy równanie jest poprawne
+            left_side, right_side = self.equation.split('=')
+            left_side = left_side.replace('+', '')
+            left_sum = sum(assignment[var] for var in left_side)
+            right_sum = sum(assignment[var] for var in right_side)
+            return left_sum == right_sum
+        for var in self.variables:
+            self.constraints[var].append(check_equation)
 
-    def columns_sum_with_carry_constraint(self, assignment):
-        if len(assignment) < len(self.variables):
-            return True  # Nie wszystkie zmienne są jeszcze przypisane
+    def add_carry_constraints(self):
+        # Podziel równanie na składniki i wynik.
+        left_side, right_side = self.equation.split('=')
+        addends = left_side.split('+')
 
-        # Obliczanie sumy dla każdej kolumny
-        carry = 0
-        for i in range(1, len(self.result_word) + 1):
-            sum_column = carry
-            for word in self.words:
-                if len(word) >= i:
-                    sum_column += assignment.get(word[-i], 0)
-            if len(self.result_word) >= i:
-                sum_column -= assignment.get(self.result_word[-i], 0)
-            if sum_column % 10 != 0 or (sum_column // 10 != carry and i != len(self.result_word)):
-                return False
-            carry = sum_column // 10
+        # Najdłuższy składnik określa potrzebną liczbę zmiennych przeniesienia.
+        max_length = max(len(addend) for addend in addends)
+        carry_vars = ['C{}'.format(i) for i in range(max_length)]
+        self.variables.extend(carry_vars)
 
-        # Sprawdzenie, czy ostatnie przeniesienie jest równe 0
-        return carry == 0
+        # Każda zmienna przeniesienia może mieć wartość 0 lub 1.
+        for carry_var in carry_vars:
+            self.domains[carry_var] = [0, 1]
+            self.constraints[carry_var] = []
 
-    def constraints_column_equations(self):
-        # Zwraca równanie ograniczenia dla każdej kolumny
-        # np. SEND + MORE = MONEY
-        #   S E N D
-        # + M O R E
-        # ----------
-        # M O N E Y
+        # Dla każdej kolumny tworzymy ograniczenia binarne.
+        for i in range(max_length):
+            # Zmienne w kolumnie i-tej i przeniesienie z poprzedniej kolumny.
+            column_vars = [addend[-i - 1] for addend in addends if i < len(addend)]
+            if i > 0:
+                column_vars.append(carry_vars[i - 1])
 
-        words_inverted = [word[::-1] for word in self.words]
-        result_word_inverted = self.result_word[::-1]
-        carry = 0
-        constraints = []
-        for i in range(len(result_word_inverted)):
-            column_value = [word[i] if i < len(word) else 0 for word in words_inverted]
-            carry = column_value // 10
-            constraint = [column_value, result_word_inverted[i], carry]
+            # Wynik w kolumnie i-tej.
+            result_var = right_side[-i - 1] if i < len(right_side) else '0'
 
+            # Przeniesienie do następnej kolumny.
+            next_carry_var = carry_vars[i] if i < len(carry_vars) - 1 else None
 
+            # Tworzenie ograniczenia dla bieżącej kolumny.
+            self.create_column_constraint(column_vars, result_var, next_carry_var)
 
-    def word_to_number(self, word, assignment):
-        # Konwersja słowa na liczbę na podstawie przypisania
-        return int(''.join(str(assignment[letter]) for letter in word if letter in assignment))
+    def create_column_constraint(self, column_vars, result_var, next_carry_var):
+        # Funkcja tworząca ograniczenie dla kolumny.
+        def column_constraint(assignment):
+            if any(var not in assignment for var in column_vars):
+                # Jeśli nie wszystkie zmienne są przypisane, ograniczenie nie jest naruszone.
+                return True
 
-    def columns_sum_with_carry(self, assignments):
-        # Sprawdź, czy suma kolumn jest poprawna (z przeniesieniami)
-        # np. SEND + MORE = MONEY
-        #   S E N D
-        # + M O R E
-        # ----------
-        # M O N E Y
-        #
-        # D+E=Y+10*(wartość kol)//10 (D - ostatnia cyfra pierwszego słowa, E - ostatnia cyfra drugiego słowa, Y - ostatnia cyfra wyniku)
-        # N+R+przeniesienie = E+10*(wartość kol)//10
-        # E+O+przeniesienie = N+10*(wartość kol)//10
-        # S+M+przeniesienie = O+10*(wartość kol)//10
-        # przeniesienie = M
+            # Oblicz sumę cyfr w kolumnie plus przeniesienie (jeśli istnieje).
+            column_sum = sum(assignment[var] for var in column_vars)
+            if next_carry_var:
+                column_sum += assignment.get(next_carry_var, 0) * 10
 
-        words_inverted = [word[::-1] for word in self.words]
-        result_word_inverted = self.result_word[::-1]
-        carry = 0
-        for i in range(len(result_word_inverted)):
-            print(assignments, result_word_inverted[i], words_inverted, carry, i)
-            column_values = [assignments[word[i]] if i < len(word) else 0 for word in words_inverted]
-            column_sum = sum(column_values) + carry
-            carry = column_sum // 10
-            if column_sum != assignments[result_word_inverted[i]] + 10 * carry:
-                return False
-        return True
+            # Sprawdź, czy suma cyfr pasuje do wyniku (z uwzględnieniem przeniesienia).
+            return column_sum % 10 == assignment.get(result_var, 0) and \
+                (next_carry_var is None or column_sum // 10 == assignment.get(next_carry_var, 0))
+
+        # Dodaj ograniczenie do wszystkich zmiennych w kolumnie.
+        for var in column_vars + [result_var]:
+            if var in self.constraints:  # Upewnij się, że wynik jest literą, a nie cyfrą.
+                self.constraints[var].append(column_constraint)

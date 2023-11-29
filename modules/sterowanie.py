@@ -1,5 +1,5 @@
 from problem import CryptoarithmeticProblem
-from metoda import CSP
+from metoda import BacktrackingSearch
 
 
 def main():
@@ -36,10 +36,8 @@ def main():
     # ])
 
     crypto_problem = CryptoarithmeticProblem(equation)
-    csp_solver = CSP(crypto_problem)
-
-    solution = csp_solver.backtracking_search()
-
+    csp_solver = BacktrackingSearch(crypto_problem)
+    solution = csp_solver.backtrack()
     if solution:
         print("Rozwiązanie zostało znalezione:")
         # for var in solution:
