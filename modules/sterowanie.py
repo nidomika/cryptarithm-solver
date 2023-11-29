@@ -7,9 +7,9 @@ def main():
     # equation = input("Please enter an equation (e.g., SEND + MORE = MONEY): ")
 
     # equation = input("Proszę wprowadzić równanie kryptoarytmetyczne (np. SEND + MORE = MONEY): ")
-    equation = "SEND + MORE = MONEY"
+    # equation = "SEND + MORE = MONEY"
     # equation = "NUM + BER = PLAY"
-    # equation = "TWO + TWO = FOUR"
+    equation = "TWO + TWO = FOUR"
     # equation = "WHAT + WAS + THY = CAUSE"
     # equation = "CP + IS + FUN = TRUE"
 

@@ -7,6 +7,7 @@ class BacktrackingSearch:
         self.variables = problem.variables
         self.domains = problem.domains
         self.constraints = problem.constraints
+        self.assigment = {}
 
     def is_complete(self, assignment):
         """
@@ -42,11 +43,11 @@ class BacktrackingSearch:
         :param var: zmienna do przypisania
         :param value: wartość do przypisania
         :param assignment: aktualne przypisanie wartości
-        :return: True jeśli wartość jest zgodna z ograniczeniami, False w przeciwnym wypadku
+        :return: True, jeśli wartość jest zgodna z ograniczeniami, False w przeciwnym wypadku
         """
         assignment[var] = value
         for constraint in self.constraints[var]:
-            print(constraint(assignment))
+            # print(constraint(assignment))
             if not constraint(assignment):
                 del assignment[var]
                 return False
@@ -66,7 +67,7 @@ class BacktrackingSearch:
         for value in self.order_domain_values(var, assignment):
             if self.is_consistent(var, value, assignment):
                 assignment[var] = value
-                print(assignment)
+                # print(assignment)
                 result = self.recursive_backtracking(assignment)
                 if result is not None:
                     return result
@@ -79,4 +80,4 @@ class BacktrackingSearch:
         Rozpoczyna proces przeszukiwania z nawrotami.
         :return: przypisanie spełniające ograniczenia lub None, jeśli nie znaleziono rozwiązania
         """
-        return self.recursive_backtracking({})
+        return self.recursive_backtracking(self.assigment)

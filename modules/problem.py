@@ -11,18 +11,16 @@ class CryptoarithmeticProblem:
         self.create_constraints()
 
     def create_constraints(self):
-        # Dodaj ogólne ograniczenie unikalności wartości.
+
+        # # Dodaj ograniczenie, że pierwsze litery nie mogą być zerami.
+        # first_letters = set(re.findall(r'\b[A-Z]', self.equation))
+        # for letter in first_letters:
+        #     self.constraints[letter].append(lambda values, l=letter: values[l] != 0)
+
         self.add_all_different_constraint()
-
-        # Dodaj ograniczenie, że pierwsze litery nie mogą być zerami.
-        first_letters = set(re.findall(r'\b[A-Z]', self.equation))
-        for letter in first_letters:
-            self.constraints[letter].append(lambda values, l=letter: values[l] != 0)
-
-        # Dodaj ograniczenie arytmetyczne dla całego równania.
-        self.add_non_zero_constraint()
-        self.add_arithmetic_constraint()
-        self.add_carry_constraints()
+        # self.add_non_zero_constraint()
+        # self.add_arithmetic_constraint()
+        # self.add_carry_constraints()
 
     def add_non_zero_constraint(self):
         first_letters = set(re.findall(r'\b[A-Z]', self.equation))
@@ -44,7 +42,9 @@ class CryptoarithmeticProblem:
             left_side = left_side.replace('+', '')
             left_sum = sum(assignment[var] for var in left_side)
             right_sum = sum(assignment[var] for var in right_side)
+            print(left_sum, right_sum)
             return left_sum == right_sum
+
         for var in self.variables:
             self.constraints[var].append(check_equation)
 
@@ -53,14 +53,16 @@ class CryptoarithmeticProblem:
         left_side, right_side = self.equation.split('=')
         addends = left_side.split('+')
 
-        # Najdłuższy składnik określa potrzebną liczbę zmiennych przeniesienia.
-        max_length = max(len(addend) for addend in addends)
+        # Prawa strona równania określa potrzebną liczbę zmiennych przeniesienia.
+        # max_length = max(len(addend) for addend in addends)
+        max_length = len(right_side)
         carry_vars = ['C{}'.format(i) for i in range(max_length)]
         self.variables.extend(carry_vars)
 
-        # Każda zmienna przeniesienia może mieć wartość 0 lub 1.
+        # Każda zmienna przeniesienia może mieć maksymalnie wartość n-1, gdzie n to liczba składników.
         for carry_var in carry_vars:
-            self.domains[carry_var] = [0, 1]
+            self.domains[carry_var] = list(range(len(addends)))
+            print(self.domains[carry_var])
             self.constraints[carry_var] = []
 
         # Dla każdej kolumny tworzymy ograniczenia binarne.
@@ -71,10 +73,11 @@ class CryptoarithmeticProblem:
                 column_vars.append(carry_vars[i - 1])
 
             # Wynik w kolumnie i-tej.
-            result_var = right_side[-i - 1] if i < len(right_side) else '0'
+            result_var = right_side[-i - 1] if i < len(right_side) else 0
 
             # Przeniesienie do następnej kolumny.
             next_carry_var = carry_vars[i] if i < len(carry_vars) - 1 else None
+            print(column_vars, result_var, next_carry_var)
 
             # Tworzenie ograniczenia dla bieżącej kolumny.
             self.create_column_constraint(column_vars, result_var, next_carry_var)
