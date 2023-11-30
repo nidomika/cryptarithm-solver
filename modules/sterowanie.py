@@ -3,7 +3,6 @@ from metoda import BacktrackingSearch
 
 
 def main():
-    print("uwu")
     # equation = input("Please enter an equation (e.g., SEND + MORE = MONEY): ")
 
     # equation = input("Proszę wprowadzić równanie kryptoarytmetyczne (np. SEND + MORE = MONEY): ")

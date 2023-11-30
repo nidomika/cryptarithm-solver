@@ -24,6 +24,7 @@ class BacktrackingSearch:
         :return: zmienna bez przypisanej wartości
         """
         for var in self.variables:
+            # print(assignment)
             if var not in assignment:
                 return var
         return None
@@ -47,7 +48,6 @@ class BacktrackingSearch:
         """
         assignment[var] = value
         for constraint in self.constraints[var]:
-            # print(constraint(assignment))
             if not constraint(assignment):
                 del assignment[var]
                 return False
@@ -65,9 +65,9 @@ class BacktrackingSearch:
 
         var = self.select_unassigned_variable(assignment)
         for value in self.order_domain_values(var, assignment):
+            # print(var, value)
             if self.is_consistent(var, value, assignment):
                 assignment[var] = value
-                # print(assignment)
                 result = self.recursive_backtracking(assignment)
                 if result is not None:
                     return result
