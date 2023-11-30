@@ -24,12 +24,17 @@ class CryptoarithmeticProblem:
 
     def add_all_different_constraint(self):
         # Dodaj ograniczenie, że wszystkie zmienne muszą mieć różne wartości.
-        for var1, var2 in itertools.combinations(self.variables, 2):
+        non_carry_vars = [var for var in self.variables if var not in self.carry_vars]
+        for var1, var2 in itertools.combinations(non_carry_vars, 2):
             self.constraints[var1].append(lambda assignment, v1=var1, v2=var2: assignment.get(v1, None) != assignment.get(v2, None))
             self.constraints[var2].append(lambda assignment, v1=var1, v2=var2: assignment.get(v1, None) != assignment.get(v2, None))
 
     def add_arithmetic_constraint(self):
         def check_equation(assignment):
+            # non_carry_vars to tablica zmiennych, które są jedną literą
+            non_carry_vars = [var for var in self.variables if len(var) == 1]
+            print(non_carry_vars)
+            print(len(assignment), len(self.variables))
             if len(assignment) < len(self.variables):  # Jeszcze nie wszystkie zmienne mają wartość
                 return True
             # Sprawdzanie, czy równanie jest poprawne
@@ -40,7 +45,7 @@ class CryptoarithmeticProblem:
             # print(left_sum, right_sum)
             return left_sum == right_sum
 
-        for var in self.variables:
+        for var in [var for var in self.variables if var not in self.carry_vars]:
             self.constraints[var].append(check_equation)
 
     def add_carry_constraints(self):
@@ -52,8 +57,10 @@ class CryptoarithmeticProblem:
         max_length = len(right_side)
         carry_vars = ['C{}'.format(i) for i in range(max_length - 1)]
         # Dodaj zmienne przeniesienia do słownika
-        self.carry_vars = {var: list(range(len(addends))) for var in carry_vars}
-        # Dla każdej kolumny tworzymy ograniczenia binarne
+        self.variables.extend(carry_vars)
+        for carry_var in carry_vars:
+            self.domains[carry_var] = list(range(len(addends)))
+            self.constraints[carry_var] = []        # Dla każdej kolumny tworzymy ograniczenia binarne
         for i in range(max_length):
             # Zmienne w kolumnie i-tej i przeniesienie z poprzedniej kolumny
             column_vars = [addend[-i - 1] for addend in addends if i < len(addend)]
